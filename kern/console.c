@@ -158,7 +158,7 @@ cga_init(void)
 }
 
 
-
+// 这个函数的意义便是：输出字符到一个数组 crt_buf ,它里面内容会被随时刷新到屏幕
 static void
 cga_putc(int c)
 {
@@ -192,12 +192,13 @@ cga_putc(int c)
 	}
 
 	// What is the purpose of this?
+	// 写满整个屏幕之后向上滚动一行
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
 		memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
 		for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
-			crt_buf[i] = 0x0700 | ' ';
+			crt_buf[i] = 0x0700 | ' ';    // 清空最后一行
 		crt_pos -= CRT_COLS;
 	}
 

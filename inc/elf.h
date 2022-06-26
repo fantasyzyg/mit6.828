@@ -3,21 +3,27 @@
 
 #define ELF_MAGIC 0x464C457FU	/* "\x7FELF" in little endian */
 
+
+/*
+	For purposes of 6.828, you can consider an ELF executable to be a header with loading information, 
+	followed by several program sections, each of which is a contiguous chunk of code or data intended to be loaded into memory at a specified address. 
+*/
+
 struct Elf {
-	uint32_t e_magic;	// must equal ELF_MAGIC
-	uint8_t e_elf[12];
-	uint16_t e_type;
-	uint16_t e_machine;
-	uint32_t e_version;
-	uint32_t e_entry;
-	uint32_t e_phoff;
-	uint32_t e_shoff;
+	uint32_t e_magic;	// must equal ELF_MAGIC 4 bytes
+	uint8_t e_elf[12];  // 12 bytes
+	uint16_t e_type;    // 2 bytes
+	uint16_t e_machine; // 2 bytes
+	uint32_t e_version; // 4 bytes
+	uint32_t e_entry;         // 程序入口：Load Address  offset: 0x10018
+	uint32_t e_phoff;         // Program Header Table 的偏移位置
+	uint32_t e_shoff;         // Section Header Table 的偏移位置
 	uint32_t e_flags;
 	uint16_t e_ehsize;
 	uint16_t e_phentsize;
-	uint16_t e_phnum;
+	uint16_t e_phnum;            // Program Header的数量
 	uint16_t e_shentsize;
-	uint16_t e_shnum;
+	uint16_t e_shnum;            // Section Header的数量
 	uint16_t e_shstrndx;
 };
 

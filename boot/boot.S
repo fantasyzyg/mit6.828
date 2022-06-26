@@ -5,9 +5,9 @@
 # memory at physical address 0x7c00 and starts executing in real mode
 # with %cs=0 %ip=7c00.
 
-.set PROT_MODE_CSEG, 0x8         # kernel code segment selector
-.set PROT_MODE_DSEG, 0x10        # kernel data segment selector
-.set CR0_PE_ON,      0x1         # protected mode enable flag
+.set PROT_MODE_CSEG, 0x8         # kernel code segment selector    gdt中的偏移量 8个字节
+.set PROT_MODE_DSEG, 0x10        # kernel data segment selector    gdt第16个字节
+.set CR0_PE_ON,      0x1         # protected mode enable flag      保护模式开启,寻址模式发生改变
 
 .globl start
 start:
@@ -45,6 +45,8 @@ seta20.2:
   # and segment translation that makes virtual addresses 
   # identical to their physical addresses, so that the 
   # effective memory map does not change during the switch.
+  # 改变寻址模式,由实模式转换为保护模式,是虚拟地址等价于物理地址,所以在这次代码寻址转变期间有效地址映射未有发生改变
+  # 加载 Global Descriptor Table 到 GDT Register (GDTR)
   lgdt    gdtdesc
   movl    %cr0, %eax
   orl     $CR0_PE_ON, %eax
@@ -76,10 +78,10 @@ spin:
 .p2align 2                                # force 4 byte alignment
 gdt:
   SEG_NULL				# null seg
-  SEG(STA_X|STA_R, 0x0, 0xffffffff)	# code seg
-  SEG(STA_W, 0x0, 0xffffffff)	        # data seg
+  SEG(STA_X|STA_R, 0x0, 0xffffffff)	# code seg     code寻址空间大小
+  SEG(STA_W, 0x0, 0xffffffff)	        # data seg      data寻址空间大小
 
 gdtdesc:
-  .word   0x17                            # sizeof(gdt) - 1
-  .long   gdt                             # address gdt
+  .word   0x17                            # sizeof(gdt) - 1   低16位是 the size of gdt
+  .long   gdt                             # address gdt    gdt地址 -> 32bit 
 

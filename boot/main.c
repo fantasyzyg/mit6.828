@@ -9,28 +9,35 @@
  *  * This program(boot.S and main.c) is the bootloader.  It should
  *    be stored in the first sector of the disk.
  *
- *  * The 2nd sector onward holds the kernel image.
+ *  * The 2nd sector onward holds the kernel image.    从第二个扇区开始存放的是内核镜像
  *
- *  * The kernel image must be in ELF format.
+ *  * The kernel image must be in ELF format.     内核镜像必须是ELF格式的
  *
  * BOOT UP STEPS
  *  * when the CPU boots it loads the BIOS into memory and executes it
  *
  *  * the BIOS intializes devices, sets of the interrupt routines, and
  *    reads the first sector of the boot device(e.g., hard-drive)
- *    into memory and jumps to it.
+ *    into memory and jumps to it.   At address 0x7c00 
  *
  *  * Assuming this boot loader is stored in the first sector of the
  *    hard-drive, this code takes over...
  *
  *  * control starts in boot.S -- which sets up protected mode,
- *    and a stack so C code then run, then calls bootmain()
+ *    and a stack so C code then run, then calls bootmain()   设置了栈顶为 0x7c00
+ * 
+ * 	1. BIOS将bootsector加载到0x7c00位置，此时物理地址与虚拟地址是一致的。
+ *  2. 然而kernel的物理地址与虚拟地址却不是一致的
+ * 
+ * 	 总结：
+ * 		1. boot部分就是加载了一个ELF头到 0x10000 空闲地址,大小为8个扇区即4k, 还有就是实现由 实模式 -> 保护模式
+ *      2. 进入c代码执行的时候需要开启分页机制
  *
  *  * bootmain() in this file takes over, reads in the kernel and jumps to it.
  **********************************************************************/
 
 #define SECTSIZE	512
-#define ELFHDR		((struct Elf *) 0x10000) // scratch space
+#define ELFHDR		((struct Elf *) 0x10000) // scratch space ELF header 放到一个较为空闲的位置即32K物理地址
 
 void readsect(void*, uint32_t);
 void readseg(uint32_t, uint32_t, uint32_t);
@@ -40,10 +47,10 @@ bootmain(void)
 {
 	struct Proghdr *ph, *eph;
 
-	// read 1st page off disk
+	// read 1st page off disk     1 page = 4K 读入4K 8个扇区  先读入elf头, 读入 1 page
 	readseg((uint32_t) ELFHDR, SECTSIZE*8, 0);
 
-	// is this a valid ELF?
+	// is this a valid ELF?     magic number?
 	if (ELFHDR->e_magic != ELF_MAGIC)
 		goto bad;
 
@@ -67,7 +74,8 @@ bad:
 }
 
 // Read 'count' bytes at 'offset' from kernel into physical address 'pa'.
-// Might copy more than asked
+// Might copy more than asked  
+// offset 是对于磁盘来说的偏移量
 void
 readseg(uint32_t pa, uint32_t count, uint32_t offset)
 {
@@ -79,6 +87,7 @@ readseg(uint32_t pa, uint32_t count, uint32_t offset)
 	pa &= ~(SECTSIZE - 1);
 
 	// translate from bytes to sectors, and kernel starts at sector 1
+	// ELF header 占据一个 sector 
 	offset = (offset / SECTSIZE) + 1;
 
 	// If this is too slow, we could read lots of sectors at a time.
@@ -91,7 +100,7 @@ readseg(uint32_t pa, uint32_t count, uint32_t offset)
 		// case once JOS enables the MMU.
 		readsect((uint8_t*) pa, offset);
 		pa += SECTSIZE;
-		offset++;
+		offset++;            // 一个一个扇区地读
 	}
 }
 

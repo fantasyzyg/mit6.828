@@ -12,6 +12,10 @@
 // The constants below define some symbol types used by various debuggers
 // and compilers.  JOS uses the N_SO, N_SOL, N_FUN, and N_SLINE types.
 
+/*
+	Stabs (Symbol Table) refers to a format for information that describes a program to a debugger. 
+*/
+
 #define	N_GSYM		0x20	// global symbol
 #define	N_FNAME		0x22	// F77 function name
 #define	N_FUN		0x24	// procedure name

@@ -7,6 +7,7 @@ ENTRY(_start)
 
 SECTIONS
 {
+	/* 加载地址为 0x100000  链接地址为 0xF0100000 */
 	/* Link the kernel at this address: "." means the current address */
 	. = 0xF0100000;
 

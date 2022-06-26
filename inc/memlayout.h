@@ -83,7 +83,7 @@
  */
 
 
-// All physical memory mapped at this address
+// All physical memory mapped at this address   256M 存储空间
 #define	KERNBASE	0xF0000000
 
 // At IOPHYSMEM (640K) there is a 384K hole for I/O.  From the kernel,

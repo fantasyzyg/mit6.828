@@ -54,6 +54,9 @@ entry:
 
 	# Load the physical address of entry_pgdir into cr3.  entry_pgdir
 	# is defined in entrypgdir.c.
+	
+	# 开启虚拟内存和分页模式     entry_pgdir 值被赋予 cr3
+	# Once CR0_PG is set, memory references are virtual addresses that get translated by the virtual memory hardware to physical addresses. 
 	movl	$(RELOC(entry_pgdir)), %eax
 	movl	%eax, %cr3
 	# Turn on paging.
@@ -64,6 +67,9 @@ entry:
 	# Now paging is enabled, but we're still running at a low EIP
 	# (why is this okay?).  Jump up above KERNBASE before entering
 	# C code.
+	# 为什么前面代码可以顺利执行呢?   因为没有进行地址跳转的操作,所以可以正常执行
+	# 但是马上要进入C code执行了,必须利用到上面的地址映射了
+	# 通过jmp，可以使得两者正常化。CPU在取指，寻址的时候，就会在有页映射的地址空间里面了。环境设置好，就可以开始跳转到C语言里面了。
 	mov	$relocated, %eax
 	jmp	*%eax
 relocated:
@@ -73,7 +79,7 @@ relocated:
 	# stack backtraces will be terminated properly.
 	movl	$0x0,%ebp			# nuke frame pointer
 
-	# Set the stack pointer
+	# Set the stack pointer    构建一个stack 只要是为了可以跑c语言代码
 	movl	$(bootstacktop),%esp
 
 	# now to C code
