@@ -3,9 +3,9 @@
 #ifndef JOS_INC_STDARG_H
 #define	JOS_INC_STDARG_H
 
-typedef __builtin_va_list va_list;
+typedef __builtin_va_list va_list;   // (char *) 可以指向任何地址
 
-#define va_start(ap, last) __builtin_va_start(ap, last)
+#define va_start(ap, last) __builtin_va_start(ap, last)   // last 代表最后一个参数，因为栈是向下生长的，所以是一个栈底的地址
 
 #define va_arg(ap, type) __builtin_va_arg(ap, type)
 

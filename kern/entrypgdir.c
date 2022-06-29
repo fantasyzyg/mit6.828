@@ -19,13 +19,13 @@ pte_t entry_pgtable[NPTENTRIES];
 // you should use "|" to combine flags.
 
 // 疑问：page directory 和 page table 有何不同?     PGSIZE=4096  可以保存1024个entry
-// 32bit 寻址空间4G 分为两级寻址 --> 10bits | 10bits | 12bits 一个page 4K
+// 32bit 寻址空间 4G 分为两级寻址 --> 10bits | 10bits | 12bits 一个page 4K
 __attribute__((__aligned__(PGSIZE)))
 pde_t entry_pgdir[NPDENTRIES] = {
 	// Map VA's [0, 4MB) to PA's [0, 4MB)
 	[0]
 		= ((uintptr_t)entry_pgtable - KERNBASE) + PTE_P,
-	// Map VA's [KERNBASE, KERNBASE+4MB) to PA's [0, 4MB)
+	// Map VA's [KERNBASE, KERNBASE+4MB) to PA's [0, 4MB)   前10bits作为基址
 	[KERNBASE>>PDXSHIFT]
 		= ((uintptr_t)entry_pgtable - KERNBASE) + PTE_P + PTE_W
 };

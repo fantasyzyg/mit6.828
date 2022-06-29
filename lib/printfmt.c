@@ -29,6 +29,7 @@ static const char * const error_string[MAXERROR] =
 };
 
 /*
+ * 简单递归解法
  * Print a number (base <= 16) in reverse order,
  * using specified putch function and associated pointer putdat.
  */
@@ -90,7 +91,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap) 
 
 	while (1) {
 		while ((ch = *(unsigned char *) fmt++) != '%') {
-			if (ch == '\0')
+			if (ch == '\0')  // 结束符号
 				return;
 			putch(ch, putdat);
 		}
@@ -124,6 +125,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap) 
 		case '7':
 		case '8':
 		case '9':
+			// 计算 precision
 			for (precision = 0; ; ++fmt) {
 				precision = precision * 10 + ch - '0';
 				ch = *fmt;

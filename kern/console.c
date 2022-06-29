@@ -67,9 +67,7 @@ serial_putc(int c)
 {
 	int i;
 
-	for (i = 0;
-	     !(inb(COM1 + COM_LSR) & COM_LSR_TXRDY) && i < 12800;
-	     i++)
+	for (i = 0;!(inb(COM1 + COM_LSR) & COM_LSR_TXRDY) && i < 12800;i++)
 		delay();
 
 	outb(COM1 + COM_TX, c);
@@ -136,7 +134,7 @@ cga_init(void)
 	uint16_t was;
 	unsigned pos;
 
-	cp = (uint16_t*) (KERNBASE + CGA_BUF);
+	cp = (uint16_t*) (KERNBASE + CGA_BUF);   // 0xB8000
 	was = *cp;
 	*cp = (uint16_t) 0xA55A;
 	if (*cp != 0xA55A) {
@@ -179,6 +177,7 @@ cga_putc(int c)
 	case '\r':
 		crt_pos -= (crt_pos % CRT_COLS);
 		break;
+	// \t 实则是底层帮忙转化为4个空格
 	case '\t':
 		cons_putc(' ');
 		cons_putc(' ');
