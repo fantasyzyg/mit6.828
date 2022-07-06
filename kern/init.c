@@ -19,6 +19,46 @@ test_backtrace(int x)
 	cprintf("leaving test_backtrace %d\n", x);
 }
 
+// 需要先声明，下面才能使用
+void test_int(int a, int b, int c, int d, int e, int f, int g, int h)
+{
+	cprintf("%p\n%p\n%p\n%p\n%p\n%p\n%p\n%p\n", &a, &b, &c, &d, &e, &f, &g, &h);
+}
+
+void test_char(char a, char b, char c, char d, char e, char f, char g, char h)
+{
+	cprintf("%p\n%p\n%p\n%p\n%p\n%p\n%p\n%p\n", &a, &b, &c, &d, &e, &f, &g, &h);
+}
+
+/**
+ * @brief  简单测试32bit系统的栈空间
+ *   
+ */
+void test_stack_pointer() {
+	// int a = 1;
+    // int b = 2;
+    // int c = 3;
+    // int d = 4;
+    // int e = 5;
+    // int f = 6;
+    // int g = 7;
+    // int h = 8;
+	
+    // test_int(a,b,c,d,e,f,g,h);
+
+	char a = '1';
+    char b = '2';
+    char c = '3';
+    char d = '4';
+    char e = '5';
+    char f = '6';
+    char g = '7';
+    char h = '8';
+
+	test_char(a,b,c,d,e,f,g,h);
+}
+
+
 void
 i386_init(void)
 {
@@ -34,6 +74,8 @@ i386_init(void)
 	cons_init();
 
 	cprintf("6828 decimal is %o octal!\n", 6828);
+
+	// test_stack_pointer();
 
 	// Test the stack backtrace function (lab 1 only)
 	test_backtrace(5);

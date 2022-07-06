@@ -33,7 +33,7 @@ cprintf(const char *fmt, ...)
 	va_list ap;
 	int cnt;
 
-	va_start(ap, fmt);             // 展开是： ap = (char *)(&fmt) + align_long(fmt);  fmt在stack上占据4 bytes
+	va_start(ap, fmt);             // 展开是： ap = (char *)(&fmt) + align_long(fmt);  fmt在stack上占据4 bytes, fmt此时就在栈上
 	cnt = vcprintf(fmt, ap);
 	va_end(ap);
 

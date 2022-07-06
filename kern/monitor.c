@@ -18,7 +18,7 @@ struct Command {
 	const char *name;
 	const char *desc;
 	// return -1 to force monitor to exit
-	int (*func)(int argc, char** argv, struct Trapframe* tf);
+	int (*func)(int argc, char** argv, struct Trapframe* tf);   // 有点函数式编程的味道
 };
 
 static struct Command commands[] = {
@@ -61,10 +61,12 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	// Your code here.
 	uint32_t ebp = read_ebp();
 	#define TO_INT(x)  *((uint32_t *)(x))
+	// debug 信息
 	struct Eipdebuginfo info;
+	cprintf("Stack backtrace:\n");
 	while (ebp) {
 		uint32_t eip = TO_INT(ebp+4);
-		cprintf("ebp %08x  eip %08x  args %08x %08x %08x %08x %08x\n", 
+		cprintf("  ebp %08x  eip %08x  args %08x %08x %08x %08x %08x\n", 
 			ebp,
 			eip,
 			TO_INT(ebp+8),
@@ -75,7 +77,7 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 		ebp = TO_INT(ebp);
 
 	    if(!debuginfo_eip(eip, &info)) {
-	      cprintf("%s:%d: %.*s+%d\n",
+	      cprintf("         %s:%d: %.*s+%d\n",
 	              info.eip_file,
 	              info.eip_line,
 	              info.eip_fn_namelen, info.eip_fn_name,
