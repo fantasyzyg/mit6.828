@@ -12,6 +12,10 @@
 // The constants below define some symbol types used by various debuggers
 // and compilers.  JOS uses the N_SO, N_SOL, N_FUN, and N_SLINE types.
 
+/*
+	Stabs (Symbol Table) refers to a format for information that describes a program to a debugger. 
+*/
+
 #define	N_GSYM		0x20	// global symbol
 #define	N_FNAME		0x22	// F77 function name
 #define	N_FUN		0x24	// procedure name
@@ -25,15 +29,15 @@
 #define	N_BSLINE	0x48	// bss segment line number
 #define	N_SSYM		0x60	// structure/union element
 #define	N_SO		0x64	// main source file name
-#define	N_LSYM		0x80	// stack variable
+#define	N_LSYM		0x80	// stack variable  局部变量符号
 #define	N_BINCL		0x82	// include file beginning
 #define	N_SOL		0x84	// included source file name
 #define	N_PSYM		0xa0	// parameter variable
 #define	N_EINCL		0xa2	// include file end
 #define	N_ENTRY		0xa4	// alternate entry point
-#define	N_LBRAC		0xc0	// left bracket
+#define	N_LBRAC		0xc0	// left bracket   函数左花括号
 #define	N_EXCL		0xc2	// deleted include file
-#define	N_RBRAC		0xe0	// right bracket
+#define	N_RBRAC		0xe0	// right bracket  函数右花括号
 #define	N_BCOMM		0xe2	// begin common
 #define	N_ECOMM		0xe4	// end common
 #define	N_ECOML		0xe8	// end common (local name)
@@ -41,7 +45,7 @@
 
 // Entries in the STABS table are formatted as follows.
 struct Stab {
-	uint32_t n_strx;	// index into string table of name
+	uint32_t n_strx;	// index into string table of name  stabstr 符号表的index
 	uint8_t n_type;         // type of symbol
 	uint8_t n_other;        // misc info (usually empty)
 	uint16_t n_desc;        // description field

@@ -5,9 +5,10 @@
 
 #include <kern/kdebug.h>
 
-extern const struct Stab __STAB_BEGIN__[];	// Beginning of stabs table
+/* 这两个section的数据也会被加载到内存当中 */
+extern const struct Stab __STAB_BEGIN__[];	// Beginning of stabs table  ->  symbol table
 extern const struct Stab __STAB_END__[];	// End of stabs table
-extern const char __STABSTR_BEGIN__[];		// Beginning of string table
+extern const char __STABSTR_BEGIN__[];		// Beginning of string table  -> string table
 extern const char __STABSTR_END__[];		// End of string table
 
 
@@ -153,9 +154,9 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		// stabs[lfun] points to the function name
 		// in the string table, but check bounds just in case.
 		if (stabs[lfun].n_strx < stabstr_end - stabstr)
-			info->eip_fn_name = stabstr + stabs[lfun].n_strx;
-		info->eip_fn_addr = stabs[lfun].n_value;
-		addr -= info->eip_fn_addr;
+			info->eip_fn_name = stabstr + stabs[lfun].n_strx;  // n_strx 
+		info->eip_fn_addr = stabs[lfun].n_value;  // function 在内存中的地址
+		addr -= info->eip_fn_addr;   // 偏移量
 		// Search within the function definition for the line number.
 		lline = lfun;
 		rline = rfun;
@@ -179,6 +180,20 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	//	Look at the STABS documentation and <inc/stab.h> to find
 	//	which one.
 	// Your code here.
+
+	/*
+		addr 可能是相对地址，也可能是全局地址
+		1. 如果在上面可以找到 N_FUN 类型的stab，lline/rline则只会被设置为两个函数之前的地址，然后再在其中查找，此时 addr 是一个相对地址
+		2. 如果在上面找不到 N_FUN 类型的stab，此时可能已经进入了汇编语言里面，会查找整个文件 [__STAB_BEGIN__, __STAB_END__]
+
+		3.  objdump -G obj/kern/kernel  查看可执行文件的符号表
+	*/
+	stab_binsearch(stabs, &lline, &rline, N_SLINE, addr);
+	if (lline <= rline) {
+		info->eip_line = stabs[rline].n_desc;
+	} else {
+		info->eip_line = -1;
+	}
 
 
 	// Search backwards from the line number for the relevant filename

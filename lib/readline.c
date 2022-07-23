@@ -2,7 +2,7 @@
 #include <inc/error.h>
 
 #define BUFLEN 1024
-static char buf[BUFLEN];
+static char buf[BUFLEN];   // 并没有动态申请内存资源，而是一个全局数组
 
 char *
 readline(const char *prompt)

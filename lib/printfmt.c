@@ -29,6 +29,7 @@ static const char * const error_string[MAXERROR] =
 };
 
 /*
+ * 简单递归解法
  * Print a number (base <= 16) in reverse order,
  * using specified putch function and associated pointer putdat.
  */
@@ -80,7 +81,7 @@ getint(va_list *ap, int lflag)
 void printfmt(void (*putch)(int, void*), void *putdat, const char *fmt, ...);
 
 void
-vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
+vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)  // ap 代表的是后面的参数列表
 {
 	register const char *p;
 	register int ch, err;
@@ -90,7 +91,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
 	while (1) {
 		while ((ch = *(unsigned char *) fmt++) != '%') {
-			if (ch == '\0')
+			if (ch == '\0')  // 结束符号
 				return;
 			putch(ch, putdat);
 		}
@@ -124,6 +125,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		case '7':
 		case '8':
 		case '9':
+			// 计算 precision
 			for (precision = 0; ; ++fmt) {
 				precision = precision * 10 + ch - '0';
 				ch = *fmt;
@@ -157,7 +159,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
 		// character
 		case 'c':
-			putch(va_arg(ap, int), putdat);
+			putch(va_arg(ap, int), putdat);      // 在栈上取下一个参数
 			break;
 
 		// error message
@@ -206,10 +208,14 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		// (unsigned) octal
 		case 'o':
 			// Replace this with your code.
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
-			break;
+			num = getuint(&ap, lflag);       // console 读取一个数字
+			// 考虑负数
+			if ((long long) num < 0) {
+				putch('-', putdat);
+				num = - (long long) num;
+			}
+			base = 8;
+			goto number;
 
 		// pointer
 		case 'p':

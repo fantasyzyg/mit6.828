@@ -67,9 +67,7 @@ serial_putc(int c)
 {
 	int i;
 
-	for (i = 0;
-	     !(inb(COM1 + COM_LSR) & COM_LSR_TXRDY) && i < 12800;
-	     i++)
+	for (i = 0;!(inb(COM1 + COM_LSR) & COM_LSR_TXRDY) && i < 12800;i++)
 		delay();
 
 	outb(COM1 + COM_TX, c);
@@ -136,7 +134,7 @@ cga_init(void)
 	uint16_t was;
 	unsigned pos;
 
-	cp = (uint16_t*) (KERNBASE + CGA_BUF);
+	cp = (uint16_t*) (KERNBASE + CGA_BUF);   // 0xB8000
 	was = *cp;
 	*cp = (uint16_t) 0xA55A;
 	if (*cp != 0xA55A) {
@@ -158,7 +156,7 @@ cga_init(void)
 }
 
 
-
+// 这个函数的意义便是：输出字符到一个数组 crt_buf ,它里面内容会被随时刷新到屏幕
 static void
 cga_putc(int c)
 {
@@ -179,6 +177,7 @@ cga_putc(int c)
 	case '\r':
 		crt_pos -= (crt_pos % CRT_COLS);
 		break;
+	// \t 实则是底层帮忙转化为4个空格
 	case '\t':
 		cons_putc(' ');
 		cons_putc(' ');
@@ -192,12 +191,13 @@ cga_putc(int c)
 	}
 
 	// What is the purpose of this?
+	// 写满整个屏幕之后向上滚动一行
 	if (crt_pos >= CRT_SIZE) {
 		int i;
 
 		memmove(crt_buf, crt_buf + CRT_COLS, (CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
 		for (i = CRT_SIZE - CRT_COLS; i < CRT_SIZE; i++)
-			crt_buf[i] = 0x0700 | ' ';
+			crt_buf[i] = 0x0700 | ' ';    // 清空最后一行
 		crt_pos -= CRT_COLS;
 	}
 
