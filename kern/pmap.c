@@ -102,8 +102,21 @@ boot_alloc(uint32_t n)
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
+	if (n < 0) {
+		panic("Boot alloc n size is less than zero\n");
+		return NULL;
+	} else if (n == 0) {
+	  return (void *)nextfree;
+	} else {
+		char *prefree = nextfree;
+		nextfree += ROUNDUP(n, PGSIZE); // 向上对齐
+		if ((uint32_t)nextfree > KERNBASE + npages * PGSIZE) {
+			panic("The Requested Address Break Page Table Limitation!");
+			return NULL;
+		}
 
-	return NULL;
+		return (void *)prefree;
+	}
 }
 
 // Set up a two-level page table:
@@ -125,7 +138,7 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	panic("mem_init: This function is not finished\n");
+	// panic("mem_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
@@ -148,7 +161,8 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.  Use memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
-
+	pages = (struct PageInfo *) boot_alloc(sizeof(struct PageInfo) * npages);
+	memset((void *)pages, 0, sizeof(struct PageInfo) * npages);
 
 	//////////////////////////////////////////////////////////////////////
 	// Now that we've allocated the initial kernel data structures, we set
@@ -242,7 +256,7 @@ page_init(void)
 	//  2) The rest of base memory, [PGSIZE, npages_basemem * PGSIZE)
 	//     is free.
 	//  3) Then comes the IO hole [IOPHYSMEM, EXTPHYSMEM), which must
-	//     never be allocated.
+	//     never be allocated.      640k -> 1M 
 	//  4) Then extended memory [EXTPHYSMEM, ...).
 	//     Some of it is in use, some is free. Where is the kernel
 	//     in physical memory?  Which pages are already in use for
@@ -251,8 +265,23 @@ page_init(void)
 	// Change the code to reflect this.
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
+	// 第一页不能被使用 保存着实模式下的 IDT 等等内容
+	// 中间有一个洞不能被使用
+	// 内核部分不能被使用
+	// note: pages数组管理的都是 physical address
+
 	size_t i;
+	int num_alloc = PADDR(boot_alloc(0)) / PGSIZE;
+	cprintf("num_alloc: %d\n", num_alloc);
+	int ext_page_num = ROUNDUP(EXTPHYSMEM, PGSIZE) / PGSIZE;
+	cprintf("range: [%d,%d), [%d,%d)\n",npages_basemem, ext_page_num, ext_page_num, num_alloc);
+
 	for (i = 0; i < npages; i++) {
+		if (i == 0 || (i >= npages_basemem && i < num_alloc)) {
+			continue;
+		}
+
+		// 头插法, 表明物理地址的分配是从最上层开始的
 		pages[i].pp_ref = 0;
 		pages[i].pp_link = page_free_list;
 		page_free_list = &pages[i];
@@ -275,7 +304,18 @@ struct PageInfo *
 page_alloc(int alloc_flags)
 {
 	// Fill this function in
-	return 0;
+	if (page_free_list == NULL) {
+		return NULL;
+	}
+
+	struct PageInfo* current_free_page = page_free_list;
+	page_free_list = current_free_page->pp_link;
+	current_free_page->pp_link = NULL;
+	if (alloc_flags & ALLOC_ZERO) {
+		// 填充整个page为0，对应应该是物理地址的
+		memset(page2kva(current_free_page), 0, PGSIZE);
+	}
+	return current_free_page;
 }
 
 //
@@ -288,6 +328,24 @@ page_free(struct PageInfo *pp)
 	// Fill this function in
 	// Hint: You may want to panic if pp->pp_ref is nonzero or
 	// pp->pp_link is not NULL.
+	if (pp->pp_ref != 0) {
+		panic("Can't Release Nonzero Page");
+		return;
+	}
+
+	if (pp->pp_link != NULL) {
+		panic("MalFormed Page,pp_link should be null");
+		return;
+	}
+
+	if (pp == NULL) {
+		return;
+	}
+
+	// 头插法
+	pp->pp_ref = 0;
+	pp->pp_link = page_free_list;
+	page_free_list = pp;
 }
 
 //

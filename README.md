@@ -3,7 +3,7 @@
 #### Lab1
 课程地址：https://pdos.csail.mit.edu/6.828/2018/labs/lab1/
 
-分为三个Part
+分为3个Part
 ### Part1：熟悉PC启动流程
 - 熟悉 x86 汇编
   - Intel syntax & AT&T syntax
@@ -27,3 +27,23 @@
 
 #### Lab2
 课程地址：https://pdos.csail.mit.edu/6.828/2018/labs/lab2/
+
+同样分为3个Part，目的是实现内存管理，包含两个组件
+1. Physical Memory Allocator
+   1. 以Page作为最小粒度进行管理
+   2. 包含allocte和free
+2. Virtual Memory Management
+   1. Maps the virtual addresses used by kernel and user software to addresses in physical memory. 
+   2. x86的硬件内存管理单元（MMU）通过查询页表（Page Table）可以帮助我们完成这种映射
+
+
+借助`CR3`寄存器，以及MMU的翻译能力，页面组织是一个两层索引树结构
+
+```java
+// virtual addresse
+10bits|10bits|12bits
+Dir|Table|Offset
+```
+
+
+### Part 1: Physical Page Management
