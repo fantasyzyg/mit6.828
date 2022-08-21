@@ -52,6 +52,7 @@ i386_detect_memory(void)
 	npages = totalmem / (PGSIZE / 1024);
 	npages_basemem = basemem / (PGSIZE / 1024);
 
+	// Physical memory: 131072K available, base = 640K, extended = 130432K  Qemu max physical memory 128M
 	cprintf("Physical memory: %uK available, base = %uK, extended = %uK\n",
 		totalmem, basemem, totalmem - basemem);
 }
@@ -84,7 +85,7 @@ static void check_page_installed_pgdir(void);
 static void *
 boot_alloc(uint32_t n)
 {
-	static char *nextfree;	// virtual address of next byte of free memory
+	static char *nextfree;	// virtual address of next byte of free memory  虚拟地址
 	char *result;
 
 	// Initialize nextfree if this is the first time.
@@ -152,7 +153,7 @@ mem_init(void)
 	// following line.)
 
 	// Permissions: kernel R, user R
-	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
+	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;   // 有点bootstrap的意思
 
 	//////////////////////////////////////////////////////////////////////
 	// Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
@@ -161,7 +162,7 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.  Use memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
-	pages = (struct PageInfo *) boot_alloc(sizeof(struct PageInfo) * npages);
+	pages = (struct PageInfo *) boot_alloc(sizeof(struct PageInfo) * npages);   // 内存用一个 PageInfo 数组组成
 	memset((void *)pages, 0, sizeof(struct PageInfo) * npages);
 
 	//////////////////////////////////////////////////////////////////////
@@ -170,7 +171,7 @@ mem_init(void)
 	// memory management will go through the page_* functions. In
 	// particular, we can now map memory using boot_map_region
 	// or page_insert
-	page_init();
+	page_init();   // 初始化 PageInfo 数组内容，将物理内存管理起来
 
 	check_page_free_list(1);
 	check_page_alloc();
@@ -276,6 +277,7 @@ page_init(void)
 	int ext_page_num = ROUNDUP(EXTPHYSMEM, PGSIZE) / PGSIZE;
 	cprintf("range: [%d,%d), [%d,%d)\n",npages_basemem, ext_page_num, ext_page_num, num_alloc);
 
+	// total pages: npages
 	for (i = 0; i < npages; i++) {
 		if (i == 0 || (i >= npages_basemem && i < num_alloc)) {
 			continue;
@@ -334,7 +336,7 @@ page_free(struct PageInfo *pp)
 	}
 
 	if (pp->pp_link != NULL) {
-		panic("MalFormed Page,pp_link should be null");
+		panic("MalFormed Page, pp_link should be null");
 		return;
 	}
 
@@ -380,12 +382,33 @@ page_decref(struct PageInfo* pp)
 //
 // Hint 3: look at inc/mmu.h for useful macros that manipulate page
 // table and page directory entries.
+// 页表里面存放的都是物理地址，需要转换为虚拟地址
+// 目的是构建虚拟地址 va 的两层页表结构
 //
 pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+	uint32_t pd_index = PDX(va);
+	uint32_t pt_index = PTX(va);
+
+	pde_t* pde = &pgdir[pd_index];
+	pte_t* pgtab;
+	// pde 存在
+	if (*pde & PTE_P) {
+		pgtab = (pte_t*) KADDR(PTE_ADDR(*pde));
+	} else {
+		struct PageInfo* alloc_pg;
+		if (!create || (alloc_pg = page_alloc(ALLOC_ZERO)) == NULL) {
+			return NULL;
+		} else {
+			alloc_pg->pp_ref++;
+			*pde = page2pa(alloc_pg) | PTE_P | PTE_W | PTE_U;
+			pgtab = (pte_t*)page2kva(alloc_pg);  // convert to virtual address.
+		}
+	}
+
+	return &pgtab[pt_index];
 }
 
 //
@@ -403,6 +426,26 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
+	char *a, *last;
+	pte_t* pte;
+	a = (char*) ROUNDDOWN(va, PGSIZE);
+	last = (char*) ROUNDDOWN(((size_t)va) + size - 1, PGSIZE);
+	for (;;) {
+		if ((pte = pgdir_walk(pgdir, (void*)a, 1)) == NULL) {
+			return;
+		}
+
+		if (*pte & PTE_P) {
+			panic("rmap");
+		}
+		*pte = pa | perm | PTE_P;   // 这里才是分配第二层级的数据
+		if (a == last) {
+			break;
+		}
+
+		a += PGSIZE;
+		pa += PGSIZE;
+	}
 }
 
 //
@@ -434,6 +477,18 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
+	pte_t * pte = pgdir_walk(pgdir, va, 1);
+	if (pte == NULL) {
+		return -E_NO_MEM;
+	}
+
+	pp->pp_ref++;
+	if (*pte & PTE_P) {
+		page_remove(pgdir, va);
+	}
+
+	*pte = page2pa(pp) | perm | PTE_P;
+	tlb_invalidate(pgdir, va);
 	return 0;
 }
 
@@ -452,13 +507,22 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
-	return NULL;
+	pte_t *pte = pgdir_walk(pgdir, va, 0);
+	if (pte == NULL || !(*pte & PTE_P)) {
+		return NULL;
+	}
+
+	if (pte_store) {
+		*pte_store = pte;
+	}
+
+	return pa2page(PTE_ADDR(*pte));
 }
 
 //
 // Unmaps the physical page at virtual address 'va'.
 // If there is no physical page at that address, silently does nothing.
-//
+// 最后的4K的页
 // Details:
 //   - The ref count on the physical page should decrement.
 //   - The physical page should be freed if the refcount reaches 0.
@@ -474,6 +538,15 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
+	pte_t* pte;
+	struct PageInfo *pg_info = page_lookup(pgdir, va, &pte);
+	if (pg_info == NULL) {
+		return;
+	}
+
+	*pte = 0;  // recycle
+	page_decref(pg_info);
+	tlb_invalidate(pgdir, va);
 }
 
 //

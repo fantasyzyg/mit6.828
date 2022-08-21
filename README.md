@@ -47,3 +47,13 @@ Dir|Table|Offset
 
 
 ### Part 1: Physical Page Management
+实现一个 `Physical page allocator`，主要是对裸机物理内存进行管理，用链表串联起来，基本单位是4K
+
+### Part 2: Virtual Memory
+首先需要熟悉X86模式下的内存管理架构：段翻译以及页翻译
+
+- 虚拟地址：A virtual address consists of a segment selector and an offset within the segment
+- 线性地址：A linear address is what you get after segment translation but before page translation
+- 物理地址：A physical address is what you finally get after both segment and page translation and what ultimately goes out on the hardware bus to your RAM.
+
+在JOS中，在boot阶段设立的GDT中已经设置了所有段的访问范围是  0 and limits to 0xffffffff, 所以虚拟地址是相等于线性地址，所以我们只需要考虑 Page Translation
